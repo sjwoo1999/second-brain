@@ -1,5 +1,7 @@
 # Second Brain
 
+[![Tests](https://github.com/sjwoo1999/second-brain/actions/workflows/test.yml/badge.svg)](https://github.com/sjwoo1999/second-brain/actions/workflows/test.yml)
+
 AI 기반 개인 지식 관리 시스템 — 대화하며 자동으로 지식을 축적하고, 그래프로 시각화하며, 맥락에 맞게 기억을 활용합니다.
 
 ## 주요 기능
@@ -53,6 +55,7 @@ second-brain/
 ├── knowledge/              # 지식 데이터 저장소
 ├── data/                   # SQLite DB 등 런타임 데이터
 ├── scripts/                # 빌드·유틸 스크립트
+├── tests/                  # 백엔드 테스트 (pytest)
 ├── run_web.py              # 웹 서버 실행 스크립트
 └── requirements.txt        # Python 의존성
 ```
@@ -158,6 +161,19 @@ npm run dev
 | `←` | `memory_stats` | 메모리 통계 갱신 |
 
 API 문서(Swagger UI)는 서버 실행 후 `http://127.0.0.1:8000/docs`에서 확인할 수 있습니다.
+
+## 테스트
+
+```bash
+# 전체 테스트 실행
+pytest tests/ -v
+
+# 커버리지 포함
+pytest tests/ --cov=core --cov=interfaces/web --cov-report=term-missing
+```
+
+- 272개 테스트, 94% 커버리지
+- `main` push 및 PR 시 GitHub Actions에서 자동 실행
 
 ## 빌드
 
