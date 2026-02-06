@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"세컨드 브레인 기본 권한","local":true,"windows":["main"],"permissions":["core:default","shell:allow-execute","shell:allow-spawn","shell:allow-open"]}}

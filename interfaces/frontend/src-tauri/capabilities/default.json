@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "default",
+  "description": "세컨드 브레인 기본 권한",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-execute",
+    "shell:allow-spawn",
+    "shell:allow-open"
+  ]
+}
