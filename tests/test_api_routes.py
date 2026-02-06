@@ -203,6 +203,61 @@ class TestGraphEndpoints:
         assert "nodes" in data
         assert "count" in data
 
+    def test_get_nodes_by_type(self, app_client):
+        """GET /api/graph/nodes?type=topic."""
+        resp = app_client.get("/api/graph/nodes", params={"type": "topic"})
+        assert resp.status_code == 200
+        app_client._mocks["graph_service"].get_nodes_by_type.assert_called()
+
+    def test_get_node_found(self, app_client):
+        """GET /api/graph/nodes/{id} → 200."""
+        mock_node = MagicMock()
+        mock_node.to_graph_node.return_value = {"id": "n1", "label": "test"}
+        app_client._mocks["graph_service"].get_node.return_value = mock_node
+        resp = app_client.get("/api/graph/nodes/n1")
+        assert resp.status_code == 200
+
+    def test_get_node_not_found(self, app_client):
+        """GET /api/graph/nodes/{id} → 404."""
+        app_client._mocks["graph_service"].get_node.return_value = None
+        resp = app_client.get("/api/graph/nodes/nonexistent")
+        assert resp.status_code == 404
+
+    def test_create_node(self, app_client):
+        """POST /api/graph/nodes → 노드 생성."""
+        from interfaces.web.models.node import Node
+        mock_node = Node(type=NodeType.TOPIC, label="Python")
+        app_client._mocks["graph_service"].find_or_create_node.return_value = (mock_node, True)
+        app_client._mocks["graph_service"].connect_to_recent = MagicMock()
+
+        resp = app_client.post("/api/graph/nodes", json={
+            "type": "topic",
+            "label": "Python",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["label"] == "Python"
+
+    def test_create_edge(self, app_client):
+        """POST /api/graph/edges → 엣지 생성."""
+        mock_edge = MagicMock()
+        mock_edge.to_graph_edge.return_value = {"source": "a", "target": "b"}
+        app_client._mocks["graph_service"].add_edge.return_value = mock_edge
+        resp = app_client.post("/api/graph/edges", params={"source_id": "a", "target_id": "b"})
+        assert resp.status_code == 200
+
+    def test_create_edge_failure(self, app_client):
+        """POST /api/graph/edges → 400."""
+        app_client._mocks["graph_service"].add_edge.return_value = None
+        resp = app_client.post("/api/graph/edges", params={"source_id": "a", "target_id": "b"})
+        assert resp.status_code == 400
+
+    def test_clear_graph(self, app_client):
+        """DELETE /api/graph/clear."""
+        resp = app_client.delete("/api/graph/clear")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "cleared"
+
     def test_get_graph_stats(self, app_client):
         """GET /api/graph/stats."""
         resp = app_client.get("/api/graph/stats")
