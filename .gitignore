@@ -5,12 +5,13 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
 venv/
 .venv/
-env/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
 
 # IDE
 .vscode/
@@ -22,20 +23,17 @@ env/
 .DS_Store
 Thumbs.db
 
-# Project
-memory/
+# Project data
+data/
 *.log
-data/profile/
 
 # Frontend
 node_modules/
 dist/
 
-# Build artifacts
+# Build
 build/
 target/
-*.exe
 
-# Misc
-nul
+# Claude Code
 .claude/
