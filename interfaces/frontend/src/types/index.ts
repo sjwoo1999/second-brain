@@ -32,6 +32,41 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+// 메모리 타입
+export type MemoryType = 'thinking_pattern' | 'record' | 'plan' | 'context' | 'preference';
+
+// 메모리 엔티티
+export interface Memory {
+  id: string;
+  type: MemoryType;
+  category: string;
+  content: string;
+  summary: string;
+  confidence: number;
+  access_count: number;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
+// 메모리 통계
+export interface MemoryStats {
+  total: number;
+  active: number;
+  by_type: Record<string, number>;
+  recent_count: number;
+  total_conversations: number;
+}
+
+// 메모리 타입 메타 (아이콘, 색상, 라벨)
+export const MEMORY_TYPE_META: Record<MemoryType, { icon: string; color: string; label: string }> = {
+  thinking_pattern: { icon: '🧠', color: '#8B5CF6', label: '사고 패턴' },
+  record: { icon: '📝', color: '#3B82F6', label: '기록' },
+  plan: { icon: '🎯', color: '#10B981', label: '계획' },
+  context: { icon: '💡', color: '#F59E0B', label: '맥락' },
+  preference: { icon: '⭐', color: '#EC4899', label: '선호도' },
+};
+
 // WebSocket 메시지 타입
 export type WSMessageType =
   | 'chat'
@@ -45,7 +80,9 @@ export type WSMessageType =
   | 'get_cost'
   | 'clear_history'
   | 'history_cleared'
-  | 'cost_update';
+  | 'cost_update'
+  | 'memory_added'
+  | 'memory_stats';
 
 // 비용 정보 타입
 export interface CostInfo {
@@ -85,7 +122,7 @@ export interface CostInfo {
 export interface WSMessage {
   type: WSMessageType;
   message?: string;
-  data?: GraphData | CostInfo;
+  data?: GraphData | CostInfo | MemoryStats | Array<{ id: string; type: string; summary: string }>;
   node?: GraphNode;
   status?: 'started' | 'completed';
 }

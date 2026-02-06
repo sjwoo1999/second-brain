@@ -2,7 +2,8 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useGraphStore } from '../stores/graphStore';
 import { useChatStore } from '../stores/chatStore';
 import { useCostStore } from '../stores/costStore';
-import type { WSMessage, GraphData, CostInfo } from '../types';
+import { useMemoryStore, fetchMemories, fetchMemoryStats } from '../stores/memoryStore';
+import type { WSMessage, GraphData, CostInfo, MemoryStats } from '../types';
 
 // Tauri 환경에서는 localhost:8000 사용, 브라우저에서는 현재 호스트 사용
 const isTauri = () => '__TAURI__' in window;
@@ -17,6 +18,7 @@ export function useWebSocket() {
   const { setGraphData, addNode } = useGraphStore();
   const { addMessage, setProcessing, setConnected } = useChatStore();
   const { setCostInfo } = useCostStore();
+  const { setStats: setMemoryStats, setMemories } = useMemoryStore();
 
   // 메시지 핸들러
   const handleMessage = useCallback(
@@ -66,6 +68,17 @@ export function useWebSocket() {
             setProcessing(false);
             break;
 
+          case 'memory_added':
+            // 새 메모리가 추출됨 → 메모리 목록 새로고침
+            fetchMemories().then(setMemories).catch(() => {});
+            break;
+
+          case 'memory_stats':
+            if (message.data && 'active' in message.data) {
+              setMemoryStats(message.data as MemoryStats);
+            }
+            break;
+
           case 'history_cleared':
             // 처리 완료
             break;
@@ -74,7 +87,7 @@ export function useWebSocket() {
         console.error('Failed to parse message:', e);
       }
     },
-    [setGraphData, addNode, addMessage, setProcessing, setCostInfo]
+    [setGraphData, addNode, addMessage, setProcessing, setCostInfo, setMemoryStats, setMemories]
   );
 
   // 연결 설정
@@ -85,6 +98,9 @@ export function useWebSocket() {
       socket.onopen = () => {
         console.log('WebSocket connected');
         setConnected(true);
+        // 초기 메모리 데이터 로드
+        fetchMemoryStats().then(setMemoryStats).catch(() => {});
+        fetchMemories().then(setMemories).catch(() => {});
       };
 
       socket.onclose = () => {

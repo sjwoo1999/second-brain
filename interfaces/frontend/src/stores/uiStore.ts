@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type MobileView = 'graph' | 'chat';
+type MobileView = 'graph' | 'chat' | 'memory';
 
 interface UIStore {
   // 모바일 뷰 상태
@@ -11,6 +11,10 @@ interface UIStore {
   // 사이드바 상태
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
+
+  // 메모리 패널 상태 (데스크톱)
+  isMemoryPanelOpen: boolean;
+  toggleMemoryPanel: () => void;
 
   // 범례 표시 상태
   showLegend: boolean;
@@ -35,6 +39,10 @@ export const useUIStore = create<UIStore>((set) => ({
   isSidebarOpen: true,
   toggleSidebar: () =>
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+
+  isMemoryPanelOpen: false,
+  toggleMemoryPanel: () =>
+    set((state) => ({ isMemoryPanelOpen: !state.isMemoryPanelOpen })),
 
   showLegend: true,
   toggleLegend: () =>

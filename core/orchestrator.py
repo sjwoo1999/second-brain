@@ -10,6 +10,7 @@ from .cost_tracker import cost_tracker, UsageRecord
 from .model_router import model_router, RoutingResult
 from .cache_service import cache_service
 from .summarizer import summarizer
+from .memory_service import memory_service
 from config.settings import settings
 
 
@@ -31,8 +32,8 @@ class Orchestrator:
         self.registry = tool_registry or registry
         self.conversation_history: list[dict] = []
 
-        # 시스템 프롬프트
-        self.system_prompt = """당신은 사용자의 개인 AI 비서입니다.
+        # 기본 시스템 프롬프트 (캐싱 대상 - 변하지 않음)
+        self.base_system_prompt = """당신은 사용자의 개인 AI 비서이자 "Second Brain"입니다.
 사용자의 요청을 이해하고, 적절한 도구를 사용해서 작업을 수행합니다.
 
 핵심 원칙:
@@ -40,6 +41,8 @@ class Orchestrator:
 2. 필요한 도구를 선택하고 실행합니다
 3. 결과를 명확하게 전달합니다
 4. 모르는 것은 솔직히 모른다고 합니다
+5. 사용자에 대해 기억하고 있는 정보를 자연스럽게 활용합니다
+6. 기억 정보를 직접 언급하기보다 맥락에 녹여서 응답합니다
 
 응답은 간결하고 핵심적으로 합니다."""
 
@@ -47,19 +50,33 @@ class Orchestrator:
         self.last_usage: Optional[UsageRecord] = None
         self.last_routing: Optional[RoutingResult] = None
 
-    def _get_system_config(self) -> list[dict]:
+    def _build_system_prompt(self, user_message: str) -> str:
+        """동적 시스템 프롬프트 생성 (기본 프롬프트 + 메모리 컨텍스트)."""
+        memory_context = memory_service.build_context(user_message)
+        if memory_context:
+            return self.base_system_prompt + "\n" + memory_context
+        return self.base_system_prompt
+
+    def _get_system_config(self, user_message: str = "") -> list[dict]:
         """시스템 프롬프트 설정 (프롬프트 캐싱 포함)."""
         if settings.cost_optimization.prompt_caching_enabled:
-            # 캐싱 활성화: cache_control 추가
-            return [
+            blocks = [
                 {
                     "type": "text",
-                    "text": self.system_prompt,
-                    "cache_control": {"type": "ephemeral"}  # 5분 캐시
+                    "text": self.base_system_prompt,
+                    "cache_control": {"type": "ephemeral"}  # 기본 프롬프트 캐싱
                 }
             ]
+            # 메모리 컨텍스트는 별도 블록 (메시지마다 변할 수 있음)
+            memory_context = memory_service.build_context(user_message)
+            if memory_context:
+                blocks.append({
+                    "type": "text",
+                    "text": memory_context,
+                })
+            return blocks
         else:
-            return self.system_prompt
+            return self._build_system_prompt(user_message)
 
     async def process(self, user_message: str) -> str:
         """사용자 메시지를 처리하고 응답 반환."""
@@ -105,8 +122,8 @@ class Orchestrator:
             "content": user_message
         })
 
-        # 4. Claude API 호출 (프롬프트 캐싱 적용)
-        system_config = self._get_system_config()
+        # 4. Claude API 호출 (프롬프트 캐싱 + 메모리 컨텍스트 적용)
+        system_config = self._get_system_config(user_message)
 
         response = self.client.messages.create(
             model=selected_model,

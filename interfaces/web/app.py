@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 
-from .routes import chat_router, graph_router, cost_router
+from .routes import chat_router, graph_router, cost_router, memory_router
 from .websocket.handler import ws_handler
 
 
@@ -37,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(graph_router)
     app.include_router(cost_router)
+    app.include_router(memory_router)
 
     # WebSocket 엔드포인트
     @app.websocket("/ws/{session_id}")

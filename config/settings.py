@@ -108,6 +108,11 @@ class Settings:
     enable_memory: bool = True
     max_conversation_history: int = 50
 
+    # 메모리 시스템 설정
+    memory_token_budget: int = 2000           # 시스템 프롬프트에 주입할 메모리 토큰 한도
+    memory_extraction_enabled: bool = True     # AI 기반 메모리 자동 추출
+    memory_confidence_threshold: float = 0.7   # 메모리 추출 최소 신뢰도
+
     # Web 설정
     web_host: str = "127.0.0.1"
     web_port: int = 8000

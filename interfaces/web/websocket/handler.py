@@ -6,8 +6,10 @@ from typing import Optional
 from fastapi import WebSocket, WebSocketDisconnect
 
 from core.orchestrator import Orchestrator
+from core.memory_service import memory_service
 from ..services.graph_service import graph_service
 from ..services.node_extractor import NodeExtractor
+from ..services.memory_extractor import memory_extractor
 
 
 class ConnectionManager:
@@ -134,6 +136,15 @@ class WebSocketHandler:
             # 비용 정보 전송
             await self._send_cost_info(websocket, session_id)
 
+            # 대화 기록을 SQLite에 저장
+            memory_service.save_conversation(session_id, "user", message)
+            memory_service.save_conversation(session_id, "assistant", response)
+
+            # 비동기로 메모리 추출 (응답 전송 후 백그라운드)
+            asyncio.create_task(
+                self._extract_memory(websocket, message, response)
+            )
+
         except Exception as e:
             await self.manager.send_message(websocket, {
                 "type": "error",
@@ -145,6 +156,25 @@ class WebSocketHandler:
                 "type": "processing",
                 "status": "completed"
             })
+
+    async def _extract_memory(self, websocket: WebSocket, message: str, response: str):
+        """백그라운드 메모리 추출 및 알림."""
+        try:
+            saved = await memory_extractor.extract_and_save(message, response)
+            if saved:
+                # 새 메모리 추출됨 → 클라이언트에 알림
+                await self.manager.send_message(websocket, {
+                    "type": "memory_added",
+                    "data": saved,
+                })
+                # 통계도 전송
+                stats = memory_service.get_stats()
+                await self.manager.send_message(websocket, {
+                    "type": "memory_stats",
+                    "data": stats.model_dump(),
+                })
+        except Exception:
+            pass  # 메모리 추출 실패는 무시
 
     async def _send_graph_data(self, websocket: WebSocket):
         """그래프 데이터 전송."""
@@ -196,7 +226,12 @@ class WebSocketHandler:
         # 클라이언트 준비 대기
         await asyncio.sleep(0.3)
 
-        greeting = "안녕하세요! 저는 당신의 Second Brain입니다.\n\n무엇이든 물어보세요. 대화하면서 지식 그래프가 만들어집니다."
+        # 메모리 통계 확인
+        stats = memory_service.get_stats()
+        if stats.active > 0:
+            greeting = f"안녕하세요! 저는 당신의 Second Brain입니다.\n\n현재 {stats.active}개의 기억을 가지고 있습니다. 대화하면서 지식 그래프와 기억이 함께 쌓여갑니다."
+        else:
+            greeting = "안녕하세요! 저는 당신의 Second Brain입니다.\n\n무엇이든 물어보세요. 대화하면서 지식 그래프가 만들어지고, 당신에 대해 기억해 나갑니다."
 
         # 인사 노드 생성
         from ..models.node import NodeType
